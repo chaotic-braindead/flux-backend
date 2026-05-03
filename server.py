@@ -3,10 +3,11 @@ from flask import Flask, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+from datetime import datetime, timezone
 
 load_dotenv()
 
-BUCKET = "wormhole-parallel-bucket"
+BUCKET = os.getenv("BUCKET")
 
 s3 = boto3.client(
     "s3",
@@ -22,25 +23,47 @@ CORS(app)
 def upload():
     try:
         folder = request.form["id"]
-        filename = request.form["filename"]
-        key = f"uploads/{folder}/{filename}"
         buff = request.files["file"]
-        response = s3.put_object(
+        key = f"uploads/{folder}/{buff.filename}"
+        s3.put_object(
             Bucket=BUCKET,
             Key=key,
             Body=buff,
-            ContentType=request.form["content_type"],
+            ContentType=buff.content_type,
             ContentLength=buff.content_length,
-            ContentDisposition=request.form["content_disposition"],
+            ContentDisposition=f"inline; filename={buff.filename}",
         )
     except Exception as e:
-        return {"message": e}, 400
+        print(str(e))
+        return {"message": str(e)}, 400
     return {"message": "ok"}, 201
 
 
 @app.get("/<id>")
 def get_items_by_id(id):
-    return s3.list_objects(Bucket=BUCKET, Prefix=f"uploads/{id}/")
+    contents = s3.list_objects(Bucket=BUCKET, Prefix=f"uploads/{id}/").get(
+        "Contents", []
+    )
+    resp = []
+    for content in contents:
+        last_modified = content["LastModified"]
+        # calculate if expired
+        now = datetime.now(timezone.utc)
+        elapsed = (now - last_modified).total_seconds()
+        remaining = 24 * 3600 - int(elapsed)
+        if remaining <= 0:
+            expires_in = 0
+            url = None
+        else:
+            expires_in = remaining
+            url = s3.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": BUCKET, "Key": content["Key"]},
+                ExpiresIn=expires_in,
+            )
+        resp.append({"url": url, **content})
+    return resp
 
 
-app.run()
+if __name__ == "__main__":
+    app.run()
