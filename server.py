@@ -3,7 +3,6 @@ from flask import Flask, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
-from uuid import uuid4
 
 load_dotenv()
 
@@ -22,21 +21,21 @@ CORS(app)
 @app.post("/upload")
 def upload():
     try:
-        id = uuid4()
-        files = request.files.getlist("files")
-
-        for file in files:
-            s3.put_object(
-                Bucket=BUCKET,
-                Key=f"uploads/{id}/{file.filename}",
-                Body=file,
-                ContentType=request.form["content_type"],
-                ContentLength=file.content_length,
-                ContentDisposition=request.form["content_disposition"],
-            )
+        folder = request.form["id"]
+        filename = request.form["filename"]
+        key = f"uploads/{folder}/{filename}"
+        buff = request.files["file"]
+        response = s3.put_object(
+            Bucket=BUCKET,
+            Key=key,
+            Body=buff,
+            ContentType=request.form["content_type"],
+            ContentLength=buff.content_length,
+            ContentDisposition=request.form["content_disposition"],
+        )
     except Exception as e:
-        return {"message": str(e)}, 400
-    return {"message": "ok", "id": id}, 201
+        return {"message": e}, 400
+    return {"message": "ok"}, 201
 
 
 @app.get("/<id>")
