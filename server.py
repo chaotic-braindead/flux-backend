@@ -16,15 +16,19 @@ s3 = boto3.client(
 )
 
 app = Flask(__name__)
+# CORS(app, origins=['<url to s3 static site>']) change if prod
 CORS(app)
 
 
 @app.post("/get-upload-link")
 def upload():
+    # the frontend's request body must be a FormData instance; ex: const formData = new FormData(); look it up frontend peeps
     try:
         folder = request.form["id"]
         buff = request.files["file"]
         key = f"uploads/{folder}/{buff.filename}"
+        # generates a presigned url so that aws takes care of uploading
+        # instead of the lambda function (faster processing uploads + less lambda bandwidth usage + not exposing API keys in client)
         resp = s3.generate_presigned_url(
             "put_object",
             Params={
@@ -37,6 +41,8 @@ def upload():
             },
             ExpiresIn=60 * 5,  # upload link valid for 5 minutes,
         )
+        # the frontend must perform a 'PUT' request to the url returned,
+        # passing the same form and the headers should be: {"Content-Type": file.type || "application/octet-stream"}
         return {"url": resp}
     except Exception as e:
         print(str(e))
@@ -45,6 +51,7 @@ def upload():
 
 @app.get("/<id>")
 def get_items_by_id(id):
+    # get all objects under a certain uuid and return expiring urls per object
     contents = s3.list_objects(Bucket=BUCKET, Prefix=f"uploads/{id}/").get(
         "Contents", []
     )
