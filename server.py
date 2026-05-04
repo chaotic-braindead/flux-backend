@@ -19,24 +19,28 @@ app = Flask(__name__)
 CORS(app)
 
 
-@app.post("/upload")
+@app.post("/get-upload-link")
 def upload():
     try:
         folder = request.form["id"]
         buff = request.files["file"]
         key = f"uploads/{folder}/{buff.filename}"
-        s3.put_object(
-            Bucket=BUCKET,
-            Key=key,
-            Body=buff,
-            ContentType=buff.content_type,
-            ContentLength=buff.content_length,
-            ContentDisposition=f"inline; filename={buff.filename}",
+        resp = s3.generate_presigned_url(
+            "put_object",
+            Params={
+                "Bucket": BUCKET,
+                "Key": key,
+                "Body": buff,
+                "ContentType": buff.content_type,
+                "ContentLength": buff.content_length,
+                "ContentDisposition": f"inline; filename={buff.filename}",
+            },
+            ExpiresIn=60 * 5,  # upload link valid for 5 minutes,
         )
+        return {"url": resp}
     except Exception as e:
         print(str(e))
         return {"message": str(e)}, 400
-    return {"message": "ok"}, 201
 
 
 @app.get("/<id>")
