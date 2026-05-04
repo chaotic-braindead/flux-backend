@@ -61,7 +61,7 @@ def get_items_by_id(id):
         # calculate if expired
         now = datetime.now(timezone.utc)
         elapsed = (now - last_modified).total_seconds()
-        remaining = 24 * 3600 - int(elapsed)
+        remaining = 24 * 3600 - int(elapsed)  # 24 hours (change if needed)
         if remaining <= 0:
             expires_in = 0
             url = None
