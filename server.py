@@ -25,12 +25,12 @@ CORS(app)
 
 @app.post("/get-upload-link")
 def upload():
-    # the frontend's request body must be a FormData instance; ex: const formData = new FormData(); look it up frontend peeps
     try:
         # generates a presigned url so that aws takes care of uploading
         # instead of the lambda function (faster processing uploads + less lambda bandwidth usage + not exposing API keys in client)
-        content_type = request.form.get("contentType", "application/octet-stream")
-        key = f"uploads/{request.form["id"]}/{request.form['filename']}"
+        data = request.get_json()
+        content_type = data.get("contentType", "application/octet-stream")
+        key = f"uploads/{data["id"]}/{data['filename']}"
         resp = s3.generate_presigned_url(
             "put_object",
             Params={
