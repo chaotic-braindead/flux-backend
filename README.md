@@ -52,7 +52,7 @@ Next, use the presigned url and perform a PUT request with the file in the reque
 
 ### Viewing contents of a folder (GET `/<id>`)
 
-Perform a GET request on the `/<id>` endpoint to get all items in the bucket along with their respective presigned urls which expire 24 hours after upload date. (change if needed)
+Perform a GET request on the `/<id>` endpoint to get the remaining time left and all items in the bucket along with their respective presigned urls which expire 24 hours after upload date. (change if needed)
 
 ## Additional info
 
