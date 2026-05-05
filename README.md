@@ -54,6 +54,8 @@ Next, use the presigned url and perform a PUT request with the file in the reque
 
 Perform a GET request on the `/<id>` endpoint to get the remaining time left and all items in the bucket along with their respective presigned urls which expire 24 hours after upload date. (change if needed)
 
+Note: 1 day lifecycle for objects was configured in S3. However, it is not guaranteed that objects will be deleted exactly after 24 hours, hence the expiring url to prevent access after expiration.
+
 ## Additional info
 
 To be hosted as a Lambda function linked to an API Gateway (automated using Zappa)
