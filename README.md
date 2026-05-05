@@ -31,6 +31,7 @@ pip install -r requirements.txt
 AWS_ACCESS_KEY=your access key here
 AWS_SECRET_KEY=your secret key here
 BUCKET=your bucket name here
+REGION=your region
 ```
 
 5. Start server
@@ -45,13 +46,13 @@ flask --app server run --debug # restarts on save
 
 Note: the backend does not directly upload a file. Instead, it returns a presigned upload url.
 
-First, perform a POST request on the `/get-upload-link` endpoint with the file in the request body to get the presigned S3 upload url (see [server.py](server.py))
+First, perform a POST request on the `/get-upload-link` endpoint with the filename, folder name/id, and contentType in the request body to get the presigned S3 upload url (see [server.py](server.py))
 
-Next, use the presigned url and perform a PUT request with the file also in the request body (see [server.py](server.py))
+Next, use the presigned url and perform a PUT request with the file in the request body and add the file's content type in the headers (see [server.py](server.py))
 
 ### Viewing contents of a folder (GET `/<id>`)
 
-Perform a GET request on the `/<id>` endpoint to get all items in the bucket along with their respective presigned urls.
+Perform a GET request on the `/<id>` endpoint to get all items in the bucket along with their respective presigned urls which expire 24 hours after upload date. (change if needed)
 
 ## Additional info
 
