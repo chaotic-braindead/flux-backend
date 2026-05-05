@@ -54,33 +54,31 @@ def get_items_by_id(id):
     contents = s3.list_objects(Bucket=BUCKET, Prefix=f"uploads/{id}/").get(
         "Contents", []
     )
-    resp = []
-    for content in contents:
-        last_modified = content["LastModified"]
-        # calculate if expired
-        now = datetime.now(timezone.utc)
-        elapsed = (now - last_modified).total_seconds()
-        remaining = 24 * 3600 - int(elapsed)  # 24 hours (change if needed)
-        if remaining <= 0:
-            break
+    oldest_obj = min(content["LastModified"] for content in contents)
+    now = datetime.now(timezone.utc)
+    elapsed = (now - oldest_obj).total_seconds()
+    remaining = 24 * 3600 - int(elapsed)  # 24 hours (change if needed)
 
-        url = s3.generate_presigned_url(
-            "get_object",
-            Params={
-                "Bucket": BUCKET,
-                "Key": content["Key"],
-            },
-            ExpiresIn=remaining,
-        )
-        resp.append(
-            {
-                "url": url,
-                "Key": content["Key"],
-                "LastModified": last_modified,
-                "Size": content["Size"],
-            }
-        )
-    return resp
+    if remaining <= 0:
+        return []
+
+    items = [
+        {
+            "url": s3.generate_presigned_url(
+                "get_object",
+                Params={
+                    "Bucket": BUCKET,
+                    "Key": content["Key"],
+                },
+                ExpiresIn=remaining,
+            ),
+            "Key": content["Key"],
+            "Size": content["Size"],
+        }
+        for content in contents
+    ]
+
+    return {"remaining_time": remaining, "items": items}
 
 
 if __name__ == "__main__":
