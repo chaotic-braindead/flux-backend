@@ -1,5 +1,5 @@
 .env
 **/__pycache__/
 venv/
-wormhole-**.*
+flux-backend-**.*
 zappa_settings.json

@@ -63,16 +63,24 @@ def get_items_by_id(id):
         elapsed = (now - last_modified).total_seconds()
         remaining = 24 * 3600 - int(elapsed)  # 24 hours (change if needed)
         if remaining <= 0:
-            expires_in = 0
-            url = None
-        else:
-            expires_in = remaining
-            url = s3.generate_presigned_url(
-                "get_object",
-                Params={"Bucket": BUCKET, "Key": content["Key"]},
-                ExpiresIn=expires_in,
-            )
-        resp.append({"url": url, **content})
+            break
+
+        url = s3.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": BUCKET,
+                "Key": content["Key"],
+            },
+            ExpiresIn=remaining,
+        )
+        resp.append(
+            {
+                "url": url,
+                "Key": content["Key"],
+                "LastModified": last_modified,
+                "Size": content["Size"],
+            }
+        )
     return resp
 
 
