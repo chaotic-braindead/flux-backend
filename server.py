@@ -40,8 +40,8 @@ def upload():
             },
             ExpiresIn=60 * 5,  # upload link valid for 5 minutes,
         )
-        # the frontend must perform a 'PUT' request to the url returned,
-        # passing the same form and the headers should be: {"Content-Type": file.type || "application/octet-stream"}
+        # the frontend must perform a PUT request to the url returned,
+        # passing the same form and the headers should be: { "Content-Type": file.type }
         return {"url": resp}
     except Exception as e:
         print(str(e))
@@ -50,11 +50,10 @@ def upload():
 
 @app.get("/<id>")
 def get_items_by_id(id):
-    # get all objects under a certain uuid and return expiring urls per object
+    # get all objects under the given id and return expiring urls per object
     contents = s3.list_objects(Bucket=BUCKET, Prefix=f"uploads/{id}/").get(
         "Contents", []
     )
-    print(contents)
     resp = []
     for content in contents:
         last_modified = content["LastModified"]
