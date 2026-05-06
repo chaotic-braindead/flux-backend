@@ -41,7 +41,9 @@ def upload():
                 "Bucket": BUCKET,
                 "Key": key,
                 "ContentType": content_type,
-                "Metadata": {"expiration_date": str(expiration_date)},
+                "Metadata": {
+                    "expiration_date": str(expiration_date)
+                },  # write expiry metadata per image bc afaik there is no way to check metadata for folders, only files
             },
             ExpiresIn=60 * 5,  # upload link valid for 5 minutes,
         )
