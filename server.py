@@ -30,6 +30,10 @@ def upload():
         # instead of the lambda function (faster processing uploads + less lambda bandwidth usage + not exposing API keys in client)
         data = request.get_json()
         content_type = data.get("contentType", "application/octet-stream")
+        now = datetime.now(timezone.utc)
+        expiration_in_seconds = data["expirationHours"] * 60 * 60
+        expiration_date = int(now.timestamp() + expiration_in_seconds)
+
         key = f"uploads/{data["id"]}/{data['filename']}"
         resp = s3.generate_presigned_url(
             "put_object",
@@ -37,6 +41,7 @@ def upload():
                 "Bucket": BUCKET,
                 "Key": key,
                 "ContentType": content_type,
+                "Metadata": {"expiration_date": str(expiration_date)},
             },
             ExpiresIn=60 * 5,  # upload link valid for 5 minutes,
         )
@@ -44,7 +49,7 @@ def upload():
         # passing the same form and the headers should be: { "Content-Type": file.type }
         return {"url": resp}
     except Exception as e:
-        return {"message": str(e)}
+        return {"message": str(e), "url": None}
 
 
 @app.get("/<id>")
@@ -54,34 +59,37 @@ def get_items_by_id(id):
         "Contents", []
     )
     if not contents:
-        return {"remaining_time": 0, "items": []}
+        return {"remaining_seconds": 0, "items": []}
 
-    # get oldest object and check if url is expired
-    oldest_obj = min(content["LastModified"] for content in contents)
+    # get expiry metadata and check if url is expired
+    metadata = s3.head_object(Bucket=BUCKET, Key=contents[0]["Key"]).get("Metadata", {})
+
+    expiration_timestamp = datetime.fromtimestamp(
+        int(metadata.get("expiration_date", 0)), tz=timezone.utc
+    )
     now = datetime.now(timezone.utc)
-    elapsed = (now - oldest_obj).total_seconds()
-    remaining = 24 * 3600 - int(elapsed)  # 24 hours (change if needed)
 
-    response = {"remaining_time": remaining, "items": []}
+    if now >= expiration_timestamp:
+        return {"remaining_seconds": 0, "items": []}
 
-    # add items if not expired
-    if remaining > 0:
-        for content in contents:
-            url = s3.generate_presigned_url(
-                "get_object",
-                Params={
-                    "Bucket": BUCKET,
-                    "Key": content["Key"],
-                },
-                ExpiresIn=remaining,
-            )
-            response["items"].append(
-                {
-                    "url": url,
-                    "Key": content["Key"],
-                    "Size": content["Size"],
-                }
-            )
+    remaining_seconds = int((expiration_timestamp - now).total_seconds())
+    response = {"remaining_seconds": remaining_seconds, "items": []}
+    for content in contents:
+        url = s3.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": BUCKET,
+                "Key": content["Key"],
+            },
+            ExpiresIn=remaining_seconds,
+        )
+        response["items"].append(
+            {
+                "url": url,
+                "Key": content["Key"],
+                "Size": content["Size"],
+            }
+        )
     return response
 
 
