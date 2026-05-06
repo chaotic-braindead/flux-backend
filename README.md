@@ -37,7 +37,7 @@ REGION=your region
 5. Start server
 
 ```
-flask --app server run --debug # restarts on save
+flask --app server run -h localhost --debug # restarts on save
 ```
 
 ## Usage
