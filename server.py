@@ -85,11 +85,17 @@ def get_items_by_id(id):
             },
             ExpiresIn=remaining_seconds,
         )
+        meta = s3.head_object(Bucket=BUCKET, Key=content["Key"]).get(
+            "ResponseMetadata", {}
+        )
+        head = meta.get("HTTPHeaders", {})
+        content_type = head.get("content-type", "application/octet-stream")
         response["items"].append(
             {
                 "url": url,
-                "Key": content["Key"],
+                "Key": content["Key"].split("/")[-1],
                 "Size": content["Size"],
+                "ContentType": content_type,
             }
         )
     return response
